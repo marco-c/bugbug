@@ -480,7 +480,7 @@ class LandingsRiskReportGenerator(object):
                 if time_to_bug is None or cur_time_to_bug < time_to_bug:
                     time_to_bug = cur_time_to_bug
 
-            time_to_confirmed = None
+            time_to_confirm = None
             if bug["is_confirmed"]:
                 for history in bug["history"]:
                     for change in history["changes"]:
@@ -489,7 +489,7 @@ class LandingsRiskReportGenerator(object):
                             and change["removed"] == "UNCONFIRMED"
                             and change["added"] in ("NEW", "ASSIGNED")
                         ):
-                            time_to_confirmed = math.ceil(
+                            time_to_confirm = math.ceil(
                                 (
                                     dateutil.parser.parse(history["when"]).replace(
                                         tzinfo=None
@@ -502,7 +502,7 @@ class LandingsRiskReportGenerator(object):
                             )
                             break
 
-                    if time_to_confirmed is not None:
+                    if time_to_confirm is not None:
                         break
 
             bug_summary = {
@@ -518,7 +518,7 @@ class LandingsRiskReportGenerator(object):
                     and bug["cf_has_regression_range"] == "yes"
                 ),
                 "time_to_bug": time_to_bug,
-                "time_to_confirmed": time_to_confirmed,
+                "time_to_confirm": time_to_confirm,
                 "whiteboard": bug["whiteboard"],
                 "assignee": bug["assigned_to"]
                 if bug["assigned_to"] != "nobody@mozilla.org"
