@@ -15,6 +15,7 @@ MODELS = {
     "browsername": "bugbug.models.browsername.BrowserNameModel",
     "bugtype": "bugbug.models.bugtype.BugTypeModel",
     "component": "bugbug.models.component.ComponentModel",
+    "component_finetuning": "bugbug.models.component.ComponentFinetuningModel",
     "component_nn": "bugbug.models.component_nn.ComponentNNModel",
     "defect": "bugbug.models.defect.DefectModel",
     "defect_finetuning": "bugbug.models.defect.DefectFinetuningModel",

@@ -8,15 +8,22 @@ from collections import Counter
 from datetime import datetime, timezone
 
 import dateutil.parser
+import torch
 import xgboost
 from dateutil.relativedelta import relativedelta
 from sklearn.compose import ColumnTransformer
 from sklearn.feature_extraction import DictVectorizer
 from sklearn.pipeline import Pipeline
+from skorch import NeuralNetClassifier
+from skorch.callbacks import ProgressBar
+from skorch.hf import HuggingfacePretrainedTokenizer
+from torch import nn
 
 from bugbug import bug_features, bugzilla, feature_cleanup, utils
 from bugbug.bugzilla import get_product_component_count
 from bugbug.model import BugModel
+from bugbug.nn import DistilBertModule, get_training_device
+from bugbug.utils import MergeText
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -368,3 +375,55 @@ class ComponentModel(BugModel):
 
     def get_extra_data(self):
         return {"conflated_components_mapping": self.CONFLATED_COMPONENTS_MAPPING}
+
+
+class ComponentFinetuningModel(ComponentModel):
+    def __init__(self, last_layer_only=True, **kwargs):
+        super().__init__(**kwargs)
+
+        self.sampler = None
+        self.calculate_importance = False
+        self.cross_validation_enabled = False
+
+        self.extraction_pipeline = Pipeline(
+            [
+                (
+                    "bug_extractor",
+                    bug_features.BugExtractor([], [], rollback=True),
+                ),
+                ("extract", MergeText(["title", "comments"])),
+            ]
+        )
+
+        self.clf = Pipeline(
+            [
+                (
+                    "tokenizer",
+                    HuggingfacePretrainedTokenizer(
+                        "distilbert-base-uncased", max_length=512
+                    ),
+                ),
+                (
+                    "classifier",
+                    NeuralNetClassifier(
+                        DistilBertModule,
+                        module__name="distilbert-base-uncased",
+                        module__num_labels=2,
+                        module__last_layer_only=last_layer_only,
+                        optimizer=torch.optim.AdamW,
+                        lr=8e-5,
+                        max_epochs=14,
+                        criterion=nn.CrossEntropyLoss,
+                        batch_size=2,
+                        iterator_train__shuffle=True,
+                        device=get_training_device(),
+                        callbacks=[
+                            ProgressBar(),
+                        ],
+                    ),
+                ),
+            ]
+        )
+
+    def get_feature_names(self):
+        return []
