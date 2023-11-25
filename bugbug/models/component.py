@@ -384,6 +384,7 @@ class ComponentFinetuningModel(ComponentModel):
         self.sampler = None
         self.calculate_importance = False
         self.cross_validation_enabled = False
+        self.last_layer_only = last_layer_only
 
         self.extraction_pipeline = Pipeline(
             [
@@ -395,6 +396,7 @@ class ComponentFinetuningModel(ComponentModel):
             ]
         )
 
+    def create_clf(self, labels):
         self.clf = Pipeline(
             [
                 (
@@ -408,8 +410,8 @@ class ComponentFinetuningModel(ComponentModel):
                     NeuralNetClassifier(
                         DistilBertModule,
                         module__name="distilbert-base-uncased",
-                        module__num_labels=2,
-                        module__last_layer_only=last_layer_only,
+                        module__num_labels=len(labels),
+                        module__last_layer_only=self.last_layer_only,
                         optimizer=torch.optim.AdamW,
                         lr=8e-5,
                         max_epochs=14,

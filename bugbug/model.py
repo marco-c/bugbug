@@ -343,6 +343,7 @@ class Model:
 
     def train(self, importance_cutoff=0.15, limit=None):
         classes, self.class_names = self.get_labels()
+        self.create_clf(self.class_names)
         self.class_names = sort_class_names(self.class_names)
 
         # Get items and labels, filtering out those for which we have no labels.
