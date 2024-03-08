@@ -3,13 +3,14 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this file,
 # You can obtain one at http://mozilla.org/MPL/2.0/.
 
-from langchain.chains import ConversationChain
-from langchain.memory import ConversationBufferMemory
-from langchain.prompts import PromptTemplate
-from langchain.chains import LLMChain
-from unidiff import Hunk, PatchedFile, PatchSet
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+
+from langchain.chains import ConversationChain, LLMChain
+from langchain.memory import ConversationBufferMemory
+from langchain.prompts import PromptTemplate
+from unidiff import Hunk, PatchedFile, PatchSet
+
 from bugbug.generative_model_tool import GenerativeModelTool
 
 
