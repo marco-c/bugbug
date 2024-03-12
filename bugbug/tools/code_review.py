@@ -113,7 +113,7 @@ class GitlabReviewData(ReviewData):
 
 
 class Patch:
-    ...
+    raw_diff: str
 
 
 class PhabricatorRevision(Patch):
