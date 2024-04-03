@@ -11,7 +11,9 @@ from langchain.memory import ConversationBufferMemory
 from langchain.prompts import PromptTemplate
 from unidiff import Hunk, PatchedFile, PatchSet
 
+from bugbug import phabricator
 from bugbug.generative_model_tool import GenerativeModelTool
+from bugbug.utils import get_secret
 
 
 class ModelResultError(Exception):
@@ -90,42 +92,52 @@ As examples of not expected comments, not related to the current patch, please, 
     - It's not clear if the `SearchService.sys.mjs` file exists or not. If it doesn't exist, this could cause an error. Please ensure that the file path is correct."""
 
 
-class ReviewData(ABC):
-    @abstractmethod
-    def get_patch_by_id(self, patch_id: int) -> "Patch":
-        raise NotImplementedError
+class ReviewRequest:
+    patch_id: int
 
-
-class PhabricatorReviewData(ReviewData):
-    def get_patch_by_id(self, patch_id: int) -> "PhabricatorRevision":
-        return self.get_by_revision_id(patch_id)
-
-    def get_by_revision_id(self, revision_id: int) -> "PhabricatorRevision":
-        raise NotImplementedError
-
-
-class GithubReviewData(ReviewData):
-    ...
-
-
-class GitlabReviewData(ReviewData):
-    ...
+    def __init__(self, patch_id) -> None:
+        super().__init__()
+        self.patch_id = patch_id
 
 
 class Patch:
     raw_diff: str
 
-
-class PhabricatorRevision(Patch):
-    ...
-
-
-class GithubPullRequest(Patch):
-    ...
+    def __init__(self, raw_diff) -> None:
+        super().__init__()
+        self.raw_diff = raw_diff
 
 
-class GitlabMergeRequest(Patch):
-    ...
+class ReviewData(ABC):
+    @abstractmethod
+    def get_review_request_by_id(self, review_id: int) -> ReviewRequest:
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_patch_by_id(self, patch_id: int) -> Patch:
+        raise NotImplementedError
+
+
+class PhabricatorReviewData(ReviewData):
+    def __init__(self):
+        phabricator.set_api_key(
+            get_secret("PHABRICATOR_URL"), get_secret("PHABRICATOR_TOKEN")
+        )
+
+    def get_review_request_by_id(self, revision_id: int) -> ReviewRequest:
+        revisions = phabricator.get(rev_ids=[int(revision_id)])
+        assert len(revisions) == 1
+        return ReviewRequest(revisions[0]["fields"]["diffID"])
+
+    def get_patch_by_id(self, patch_id: int) -> Patch:
+        assert phabricator.PHABRICATOR_API is not None
+        raw_diff = phabricator.PHABRICATOR_API.load_raw_diff(int(patch_id))
+        return Patch(raw_diff)
+
+
+review_data_classes = {
+    "phabricator": PhabricatorReviewData,
+}
 
 
 @dataclass
@@ -135,45 +147,6 @@ class InlineComment:
     end_line: int
     comment: str
     on_added_code: bool
-
-
-def generate_processed_output(output: str, patch: PatchSet):
-    output = output.strip()
-    if output.startswith("```json") and output.endswith("```"):
-        output = output[7:-3]
-
-    comments = json.loads(output)
-
-    patched_files_map = {
-        patched_file.target_file: patched_file for patched_file in patch
-    }
-
-    for comment in comments:
-        file_path = comment["file"]
-        if not file_path.startswith("b/") and not file_path.startswith("a/"):
-            file_path = "b/" + file_path
-
-        # FIXME: currently, we do not handle renamed files
-
-        patched_file = patched_files_map.get(file_path)
-        if patched_file is None:
-            raise FileNotInPatchError(
-                f"The file `{file_path}` is not part of the patch: {list(patched_files_map)}"
-            )
-
-        scope = find_comment_scope(patched_file, comment["code_line"])
-
-        yield {
-            "file_path": (
-                patched_file.target_file[2:]
-                if scope["has_added_lines"]
-                else patched_file.source_file[2:]
-            ),
-            "content": comment["comment"],
-            "line_start": scope["line_start"],
-            "line_end": scope["line_end"],
-            "has_added_lines": scope["has_added_lines"],
-        }
 
 
 def find_comment_scope(file: PatchedFile, line_number: int):
@@ -259,9 +232,9 @@ class CodeReviewTool(GenerativeModelTool):
             llm=self.llm,
         )
 
-    def run(self, patch: Patch) -> list[InlineComment]:
-        patch = PatchSet.from_string(patch.raw_diff)
-        formatted_patch = format_patch_set(patch)
+    def run(self, patch: Patch) -> list[InlineComment] | None:
+        patch_set = PatchSet.from_string(patch.raw_diff)
+        formatted_patch = format_patch_set(patch_set)
         if formatted_patch == "":
             return None
 
@@ -269,6 +242,8 @@ class CodeReviewTool(GenerativeModelTool):
             {"patch": formatted_patch},
             return_only_outputs=True,
         )["text"]
+
+        print(output_summarization)
 
         memory = ConversationBufferMemory()
         conversation_chain = ConversationChain(
@@ -294,6 +269,8 @@ class CodeReviewTool(GenerativeModelTool):
             input=PROMPT_TEMPLATE_REVIEW.format(patch=formatted_patch)
         )
 
+        print(output)
+
         memory.clear()
 
         raw_output = self.filtering_chain.invoke(
@@ -301,12 +278,4 @@ class CodeReviewTool(GenerativeModelTool):
             return_only_outputs=True,
         )["text"]
 
-        if process_output:
-            return generate_processed_output(raw_output, patch)
-
         return raw_output
-
-
-class PhabricatorCodeReviewTool(CodeReviewTool):
-    def __init__(self, *args, **kwargs) -> None:
-        super().__init__(*args, **kwargs)
