@@ -2099,7 +2099,7 @@ wheels = [
 
 [[package]]
 name = "google-cloud-pubsub"
-version = "2.39.2"
+version = "2.41.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "google-api-core", extra = ["grpc"] },
@@ -2112,9 +2112,9 @@ dependencies = [
     { name = "proto-plus" },
     { name = "protobuf" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/d1/2f/a70b6ba2016acc16ca3e4d357151edda047f63752ddcf8baee29c41e5f94/google_cloud_pubsub-2.39.2.tar.gz", hash = "sha256:934a3ab7496a6da09cd97d866bef3e47092e904688a66f60750895a7484bd585", size = 403181, upload-time = "2026-08-25T19:18:59.568Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/17/17/a40387921a375c9cac6ec5e276c9ea7a756a7bbca94f4d5df9403bf5554b/google_cloud_pubsub-2.41.0.tar.gz", hash = "sha256:4c7b42c23c1457543665ec162d75e0ba1b1d4c98adcc9c753f3517164f7937d7", size = 397739, upload-time = "2026-09-17T20:30:29.975Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/62/e1/14519798b767f1ce4adf3c239c31bb1a5af607646e293e92ed1770faaa06/google_cloud_pubsub-2.39.2-py3-none-any.whl", hash = "sha256:b1295c6641032aff1dabbddf495b10642a5b547f6783ee4c6bb3365682e71354", size = 323836, upload-time = "2026-08-24T21:55:46.512Z" },
+    { url = "https://files.pythonhosted.org/packages/0e/64/5b77fe420b382cf27c31e206a690c2ab2994035aeaa8900bdc82493794f9/google_cloud_pubsub-2.41.0-py3-none-any.whl", hash = "sha256:a71436ccc2ebe784d8c4d34c5e1395f6edaf4f560fa23a0b99f7ad846efd35aa", size = 322312, upload-time = "2026-09-17T20:29:59.309Z" },
 ]
 
 [[package]]
@@ -4735,9 +4735,9 @@ resolution-markers = [
     "python_full_version < '3.13' and platform_machine == 'x86_64' and sys_platform == 'darwin'",
 ]
 dependencies = [
-    { name = "llvmlite", version = "0.36.0", source = { registry = "https://pypi.org/simple" }, marker = "platform_machine == 'x86_64' and sys_platform == 'darwin'" },
-    { name = "numpy", marker = "platform_machine == 'x86_64' and sys_platform == 'darwin'" },
-    { name = "setuptools", marker = "platform_machine == 'x86_64' and sys_platform == 'darwin'" },
+    { name = "llvmlite", version = "0.36.0", source = { registry = "https://pypi.org/simple" } },
+    { name = "numpy" },
+    { name = "setuptools" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/e3/7d/3d61160836e49f40913741c464f119551c15ed371c1d91ea50308495b93b/numba-0.53.1.tar.gz", hash = "sha256:9cd4e5216acdc66c4e9dab2dfd22ddb5bef151185c070d4a3cd8e78638aff5b0", size = 2213956, upload-time = "2021-03-26T09:15:50.402Z" }
 
@@ -4757,8 +4757,8 @@ resolution-markers = [
     "(python_full_version < '3.13' and platform_machine != 'x86_64' and sys_platform == 'darwin') or (python_full_version < '3.13' and sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'win32')",
 ]
 dependencies = [
-    { name = "llvmlite", version = "0.48.0", source = { registry = "https://pypi.org/simple" }, marker = "platform_machine != 'x86_64' or sys_platform != 'darwin'" },
-    { name = "numpy", marker = "platform_machine != 'x86_64' or sys_platform != 'darwin'" },
+    { name = "llvmlite", version = "0.48.0", source = { registry = "https://pypi.org/simple" } },
+    { name = "numpy" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/ae/a0/570e3dc53e5602b49108f62a13e529f1eec8bfc7ef37d49c825924dcf546/numba-0.66.0.tar.gz", hash = "sha256:b900e63a0e26c05ea9a6d5a3a5a0a177cb64c5011887bf43edb8c3ed2c38d363", size = 2806181, upload-time = "2026-07-01T23:12:46.36Z" }
 wheels = [
@@ -5188,7 +5188,7 @@ name = "pexpect"
 version = "4.9.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "ptyprocess", marker = "sys_platform != 'emscripten' and sys_platform != 'win32'" },
+    { name = "ptyprocess" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/42/92/cc564bf6381ff43ce1f4d06852fc19a2f11d180f23dc32d9588bee2f149d/pexpect-4.9.0.tar.gz", hash = "sha256:ee7d41123f3c9911050ea2c2dac107568dc43b2d3b0c7557a33212c398ead30f", size = 166450, upload-time = "2023-11-25T09:07:26.339Z" }
 wheels = [
@@ -6822,8 +6822,8 @@ name = "secretstorage"
 version = "3.5.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "cryptography", marker = "(platform_machine != 'x86_64' and sys_platform == 'darwin') or (sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'win32')" },
-    { name = "jeepney", marker = "(platform_machine != 'x86_64' and sys_platform == 'darwin') or (sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'win32')" },
+    { name = "cryptography" },
+    { name = "jeepney" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/1c/03/e834bcd866f2f8a49a85eaff47340affa3bfa391ee9912a952a1faa68c7b/secretstorage-3.5.0.tar.gz", hash = "sha256:f04b8e4689cbce351744d5537bf6b1329c6fc68f91fa666f60a380edddcd11be", size = 19884, upload-time = "2025-11-23T19:02:53.191Z" }
 wheels = [
