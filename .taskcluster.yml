@@ -366,9 +366,15 @@ tasks:
                 dependencies:
                   - { $eval: as_slugid("bug_fix_image_build") }
                 workerType: compute-large
+                scopes:
+                  - docker-worker:cache:bugbug-bug-fix-image-firefox-checkout
+                  - generic-worker:cache:bugbug-bug-fix-image-firefox-checkout
                 payload:
                   env:
                     BUG_FIX_IMAGE_SLOW: "1"
+                  # Where the tests keep their Firefox checkout between runs.
+                  cache:
+                    bugbug-bug-fix-image-firefox-checkout: /cache
                   image:
                     type: task-image
                     path: public/bug-fix-agent/bugbug-hackbot-agent-bug-fix.tar.zst
@@ -400,10 +406,16 @@ tasks:
                   - { $eval: as_slugid("bug_fix_image_build") }
                 deadline: { $fromNow: "8 hours" }
                 workerType: compute-super-large
+                scopes:
+                  - docker-worker:cache:bugbug-bug-fix-image-firefox-checkout
+                  - generic-worker:cache:bugbug-bug-fix-image-firefox-checkout
                 payload:
                   maxRunTime: 21600
                   env:
                     BUG_FIX_IMAGE_FULL_BUILD: "1"
+                  # Where the tests keep their Firefox checkout between runs.
+                  cache:
+                    bugbug-bug-fix-image-firefox-checkout: /cache
                   image:
                     type: task-image
                     path: public/bug-fix-agent/bugbug-hackbot-agent-bug-fix.tar.zst

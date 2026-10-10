@@ -19,7 +19,8 @@ Two slower tests bootstrap a Firefox checkout and build it:
 
 They check what bootstrap does to a clean home directory, so each needs a fresh
 container: from the host, each gets one, with the checkout kept in the
-bug-fix-image-test-workspace volume so only the first run pays for the clone.
+bug-fix-image-test-workspace volume so only the first run pays for the clone. In
+CI it's kept in a cache mounted at /cache.
 """
 
 import array
@@ -61,7 +62,11 @@ pytestmark = pytest.mark.skipif(
 
 HOME = Path("/home/agent")
 WORKSPACE_VOLUME = "bug-fix-image-test-workspace"
-SRC = Path("/workspace/firefox")
+# CI keeps the Firefox checkout in a cache mounted here, if the agent user can
+# write to it; otherwise it goes in /workspace (a volume, from the host).
+CHECKOUT_CACHE = Path("/cache")
+CHECKOUT_CACHED = CHECKOUT_CACHE.is_dir() and os.access(CHECKOUT_CACHE, os.W_OK)
+SRC = (CHECKOUT_CACHE if CHECKOUT_CACHED else Path("/workspace")) / "firefox"
 PYTEST_VERSION = "9.1.0"
 
 # Where bootstrap puts minidump-stackwalk, and a release to stand in for it in the
@@ -781,18 +786,44 @@ def test_firefox_profiler(nightly, tmp_path):
     check_profiler(nightly, tmp_path)
 
 
+@pytest.fixture
+def bootstrapped_checkout():
+    """A Firefox checkout bootstrapped the way the agent does it.
+
+    What a test builds in it is cleaned up afterwards, so a cached checkout
+    doesn't keep a build's worth of disk space between runs.
+    """
+    checkout_and_bootstrap()
+    yield
+    step("Cleaning up the checkout")
+    run(["git", "clean", "-fdxq"], cwd=SRC, check=False)
+
+
 def checkout_and_bootstrap():
     """Get a Firefox checkout and bootstrap it the way the agent does."""
+    if CHECKOUT_CACHE.is_dir() and not CHECKOUT_CACHED:
+        step(f"{CHECKOUT_CACHE} isn't writable, so not using it for the checkout")
     step(f"Getting a Firefox checkout in {SRC}")
     # Deep enough for an artifact build to find a recent push CI has built: the
     # tip often hasn't been yet.
     if (SRC / ".git").exists():
-        sh(
-            f"set -e; cd {SRC}; git fetch -q --depth=50 origin HEAD; "
-            "git reset -q --hard FETCH_HEAD; git clean -fdxq",
+        update = run(
+            [
+                "bash",
+                "-c",
+                "set -e; git fetch -q --depth=50 origin HEAD; "
+                "git reset -q --hard FETCH_HEAD; git clean -fdxq",
+            ],
+            cwd=SRC,
             timeout=1800,
+            check=False,
         )
-    else:
+        if update.returncode != 0:
+            # Say, a clone that got interrupted in a cached checkout.
+            step("Updating the checkout failed, cloning it again")
+            shutil.rmtree(SRC)
+    if not (SRC / ".git").exists():
+        shutil.rmtree(SRC, ignore_errors=True)
         run(
             ["git", "clone", "-q", "--depth=50"]
             + ["https://github.com/mozilla-firefox/firefox.git", SRC],
@@ -838,8 +869,7 @@ def mach(*args, mozconfig=None, timeout=900):
 
 
 @pytest.mark.skipif(not SLOW, reason="BUG_FIX_IMAGE_SLOW is not set")
-def test_artifact_build_and_tests(tmp_path):
-    checkout_and_bootstrap()
+def test_artifact_build_and_tests(bootstrapped_checkout, tmp_path):
 
     # The agent's debug + clang-plugin config finds the bootstrapped toolchain.
     step("Configuring with the agent's mozconfig")
@@ -952,8 +982,7 @@ def build_firefox_showing_progress(fx):
 
 
 @pytest.mark.skipif(not FULL_BUILD, reason="BUG_FIX_IMAGE_FULL_BUILD is not set")
-def test_full_build_and_tests(tmp_path_factory):
-    checkout_and_bootstrap()
+def test_full_build_and_tests(bootstrapped_checkout, tmp_path_factory):
     fx = FirefoxContext.from_source_repo(SRC)
 
     # What the agent builds, with its own tool and mozconfig.
