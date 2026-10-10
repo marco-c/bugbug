@@ -6,20 +6,24 @@ ENV UV_PROJECT_ENVIRONMENT=/opt/venv
 
 WORKDIR /app
 
+# Bind-mounted files aren't part of a step's cache key, so what the steps below
+# install is copied in first: when it changes, they rerun rather than leave a
+# stale environment in a cached build.
+
 # Install external deps without building workspace members.
+COPY pyproject.toml uv.lock VERSION ./
 RUN --mount=type=cache,target=/root/.cache/uv \
-    --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
-    --mount=type=bind,source=uv.lock,target=uv.lock \
-    --mount=type=bind,source=VERSION,target=VERSION \
     uv sync --frozen --no-dev --no-install-workspace --package hackbot-agent-bug-fix
 
+# The workspace members that go into the environment; uv.lock covers the rest.
+COPY agents/bug-fix agents/bug-fix
+COPY libs libs
 RUN --mount=type=cache,target=/root/.cache/uv \
     --mount=type=bind,target=/app,rw \
     uv sync --locked --no-dev --no-editable --package hackbot-agent-bug-fix
 
 FROM python:3.12 AS base
 
-COPY --from=builder /opt/venv /opt/venv
 WORKDIR /app
 
 ENV PYTHONUNBUFFERED=1
@@ -125,12 +129,18 @@ ENV MOZBUILD_STATE_PATH=/home/agent/.mozbuild
 # agent's shell finds node, samply and the developer tools (in ~/.cargo/bin).
 ENV PATH="/home/agent/.cargo/bin:/home/agent/.mozbuild/clang/bin:/home/agent/.mozbuild/minidump-stackwalk:/home/agent/.mozbuild/node/bin:/home/agent/.mozbuild/samply:${PATH}"
 
+# Last, as it changes with any Python change: the layers above (system
+# packages, mostly) stay cached across those.
+COPY --from=builder /opt/venv /opt/venv
+
 USER agent
 
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
 CMD ["python", "-m", "hackbot_agents.bug_fix"]
 
 FROM base AS broker
+
+COPY --from=builder /opt/venv /opt/venv
 
 RUN useradd --create-home --shell /bin/bash broker
 
